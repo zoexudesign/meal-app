@@ -1502,37 +1502,56 @@
             const token = localStorage.getItem(GH_TOKEN_KEY);
             if (!token) { openTokenModal(); return; }
 
-            const list = getInspirations();
-            if (list.length === 0) { showToast('还没有记录哦'); return; }
-
             const btn = document.getElementById('syncBtn');
             btn.disabled = true;
             btn.textContent = '⏳ 同步中...';
 
             try {
-                // Get current file SHA (if exists)
+                // Step 1: Pull remote data and SHA
                 let sha = null;
+                let remoteItems = [];
                 try {
                     const getRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
-                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                        cache: 'no-store'
                     });
                     if (getRes.ok) {
                         const data = await getRes.json();
                         sha = data.sha;
+                        const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                        if (json.inspirations) remoteItems = json.inspirations;
                     }
-                } catch (e) { /* file doesn't exist yet, that's fine */ }
+                } catch (e) { /* file doesn't exist yet */ }
 
-                // Prepare content
+                // Step 2: Merge local + remote (dedup by dish+date)
+                const local = getInspirations();
+                const keyOf = item => item.dish + '|' + item.date;
+                const seen = new Set();
+                const merged = [];
+                [...local, ...remoteItems].forEach(item => {
+                    const k = keyOf(item);
+                    if (!seen.has(k)) { seen.add(k); merged.push(item); }
+                });
+                merged.sort((a, b) => b.date.localeCompare(a.date));
+
+                // Step 3: Save merged locally
+                saveInspirations(merged);
+                renderInspirations();
+
+                if (merged.length === 0) {
+                    showToast('还没有记录哦');
+                    return;
+                }
+
+                // Step 4: Push merged to GitHub
                 const syncData = {
                     lastSync: new Date().toISOString(),
-                    totalDishes: list.length,
-                    inspirations: list
+                    totalDishes: merged.length,
+                    inspirations: merged
                 };
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(syncData, null, 2))));
-
-                // PUT file
                 const body = {
-                    message: `sync: ${list.length} dishes (${new Date().toLocaleDateString('zh-CN')})`,
+                    message: `sync: ${merged.length} dishes (${new Date().toLocaleDateString('zh-CN')})`,
                     content: content
                 };
                 if (sha) body.sha = sha;
@@ -1551,7 +1570,7 @@
                     const now = new Date().toLocaleString('zh-CN');
                     localStorage.setItem(GH_SYNC_TIME_KEY, now);
                     updateSyncStatus();
-                    showToast('☁️ 同步成功！');
+                    showToast(`☁️ 同步成功！共 ${merged.length} 道菜`);
                 } else if (putRes.status === 401 || putRes.status === 403) {
                     localStorage.removeItem(GH_TOKEN_KEY);
                     showToast('Token 无效，请重新设置');
