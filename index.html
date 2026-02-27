@@ -1000,6 +1000,126 @@
             margin-bottom: 10px;
         }
 
+        /* Dislikes Section */
+        .dislike-section {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .dislike-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 10px 0;
+        }
+
+        .dislike-toggle-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .dislike-toggle-arrow {
+            color: var(--text-dim);
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .dislike-section.open .dislike-toggle-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dislike-body {
+            display: none;
+            padding-top: 8px;
+        }
+
+        .dislike-section.open .dislike-body {
+            display: block;
+        }
+
+        .dislike-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .dislike-input {
+            flex: 1;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .dislike-input:focus {
+            border-color: #ff6b6b;
+        }
+
+        .dislike-add-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border: none;
+            border-radius: 12px;
+            padding: 10px 16px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .dislike-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .dislike-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 107, 107, 0.15);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 13px;
+            color: #ff6b6b;
+            animation: slideUp 0.3s ease;
+        }
+
+        .dislike-tag-del {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+            opacity: 0.6;
+        }
+
+        .dislike-tag-del:hover {
+            opacity: 1;
+        }
+
+        .dislike-empty {
+            font-size: 13px;
+            color: var(--text-dim);
+            text-align: center;
+            padding: 12px;
+        }
+
+        .dislike-hint {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+            opacity: 0.7;
+        }
+
         @keyframes spin {
             to {
                 transform: rotate(360deg);
@@ -1229,6 +1349,22 @@
             <div class="ai-result-body" id="aiResultBody"></div>
         </div>
         <div id="inspList"></div>
+        <div class="dislike-section" id="dislikeSection">
+            <div class="dislike-toggle" onclick="toggleDislikeSection()">
+                <span class="dislike-toggle-title">🚫 不爱吃的食材 <span id="dislikeCount"
+                        style="font-weight:400;font-size:13px;color:var(--text-dim);"></span></span>
+                <span class="dislike-toggle-arrow">▼</span>
+            </div>
+            <div class="dislike-body">
+                <div class="dislike-hint">记录不喜欢的食材，生成下月菜单时会自动避开</div>
+                <div class="dislike-input-row">
+                    <input type="text" class="dislike-input" id="dislikeInput" placeholder="输入不爱吃的食材，如：香菜、苦瓜..."
+                        maxlength="30" enterkeyhint="done">
+                    <button class="dislike-add-btn" onclick="addDislike()">添加</button>
+                </div>
+                <div class="dislike-tags" id="dislikeTags"></div>
+            </div>
+        </div>
     </div>
     </div>
 
@@ -1615,12 +1751,126 @@
             if (e.key === 'Enter') { e.preventDefault(); addInspiration(); }
         });
 
-        // ======== GitHub Sync ========
+        // ======== GitHub Config (shared) ========
         const GH_TOKEN_KEY = 'meal_gh_token';
         const GH_OWNER = 'zoexudesign';
         const GH_REPO = 'meal-app';
         const GH_FILE = 'inspirations.json';
         const GH_SYNC_TIME_KEY = 'meal_last_sync';
+
+        // ======== Dislikes System ========
+        const DISLIKE_KEY = 'meal_dislikes';
+        const GH_DISLIKE_FILE = 'dislikes.json';
+
+        function getDislikes() {
+            try { return JSON.parse(localStorage.getItem(DISLIKE_KEY)) || []; }
+            catch { return []; }
+        }
+        function saveDislikes(list) { localStorage.setItem(DISLIKE_KEY, JSON.stringify(list)); }
+
+        function addDislike() {
+            const input = document.getElementById('dislikeInput');
+            const raw = input.value.trim();
+            if (!raw) return;
+            const items = raw.split(/[、，,]/).map(s => s.trim()).filter(s => s.length > 0);
+            const list = getDislikes();
+            let added = 0;
+            items.forEach(item => {
+                if (!list.includes(item)) { list.push(item); added++; }
+            });
+            if (added > 0) {
+                saveDislikes(list);
+                renderDislikes();
+                showToast(`🚫 已添加 ${added} 个不爱吃的食材`);
+            } else {
+                showToast('已经记录过了');
+            }
+            input.value = '';
+        }
+
+        function removeDislike(item) {
+            saveDislikes(getDislikes().filter(d => d !== item));
+            renderDislikes();
+        }
+
+        function renderDislikes() {
+            const list = getDislikes();
+            const container = document.getElementById('dislikeTags');
+            const countEl = document.getElementById('dislikeCount');
+            countEl.textContent = list.length > 0 ? `(${list.length})` : '';
+            if (list.length === 0) {
+                container.innerHTML = '<div class="dislike-empty">还没有记录不爱吃的食材</div>';
+                return;
+            }
+            container.innerHTML = list.map(item =>
+                `<span class="dislike-tag">🚫 ${escapeHtml(item)}<button class="dislike-tag-del" onclick="event.stopPropagation();removeDislike('${item.replace(/'/g, "\\'")}')">✕</button></span>`
+            ).join('');
+        }
+
+        function toggleDislikeSection() {
+            document.getElementById('dislikeSection').classList.toggle('open');
+        }
+
+        document.getElementById('dislikeInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); addDislike(); }
+        });
+
+        // Sync dislikes to GitHub
+        async function syncDislikesToGitHub() {
+            const token = localStorage.getItem(GH_TOKEN_KEY);
+            if (!token) return;
+            const list = getDislikes();
+            if (list.length === 0) return;
+            try {
+                // Get existing file SHA
+                let sha = null;
+                try {
+                    const getRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_DISLIKE_FILE}`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                        cache: 'no-store'
+                    });
+                    if (getRes.ok) { sha = (await getRes.json()).sha; }
+                } catch (e) { }
+                const syncData = { lastSync: new Date().toISOString(), dislikes: list };
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(syncData, null, 2))));
+                const body = { message: `sync dislikes: ${list.length} items`, content };
+                if (sha) body.sha = sha;
+                await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_DISLIKE_FILE}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+            } catch (e) { /* silent */ }
+        }
+
+        // Pull dislikes from GitHub on load
+        async function pullDislikesFromGitHub() {
+            const token = localStorage.getItem(GH_TOKEN_KEY);
+            try {
+                const headers = { 'Accept': 'application/vnd.github.v3+json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_DISLIKE_FILE}`, {
+                    headers, cache: 'no-store'
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                if (!json.dislikes || json.dislikes.length === 0) return;
+                const local = getDislikes();
+                let added = 0;
+                json.dislikes.forEach(item => {
+                    if (!local.includes(item)) { local.push(item); added++; }
+                });
+                if (added > 0) {
+                    saveDislikes(local);
+                    renderDislikes();
+                }
+            } catch (e) { /* silent */ }
+        }
+        pullDislikesFromGitHub();
+        renderDislikes();
+
+        // ======== GitHub Sync ========
 
         function openTokenModal() { document.getElementById('tokenModal').classList.add('show'); }
         function closeTokenModal() { document.getElementById('tokenModal').classList.remove('show'); }
@@ -1705,6 +1955,8 @@
                     const now = new Date().toLocaleString('zh-CN');
                     localStorage.setItem(GH_SYNC_TIME_KEY, now);
                     updateSyncStatus();
+                    // Also sync dislikes
+                    syncDislikesToGitHub();
                     showToast(`☁️ 同步成功！共 ${merged.length} 道菜`);
                 } else if (putRes.status === 401 || putRes.status === 403) {
                     localStorage.removeItem(GH_TOKEN_KEY);
