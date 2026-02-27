@@ -902,16 +902,170 @@
             transform: translate(-50%, -50%) scale(1);
         }
 
+        /* Search Page */
+        .search-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 17, 23, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 20px;
+        }
+
+        .search-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f6d365, #fda085);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .search-header-sub {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .search-content {
+            padding: 16px 16px 120px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-input-wrap {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            min-width: 0;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-size: 15px;
+            color: var(--text);
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .search-input:focus {
+            border-color: #f6d365;
+        }
+
+        .search-result-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            animation: slideUp 0.3s ease;
+        }
+
+        .search-result-title {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .search-result-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .search-badge.breakfast {
+            background: rgba(246, 211, 101, 0.2);
+            color: #f6d365;
+        }
+
+        .search-badge.lunch {
+            background: rgba(168, 237, 234, 0.2);
+            color: #a8edea;
+        }
+
+        .search-badge.dinner {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .search-badge.date {
+            background: var(--glass);
+            color: var(--text-dim);
+        }
+
+        .search-result-ing {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+
+        .search-result-ing mark {
+            background: rgba(232, 168, 73, 0.25);
+            color: var(--accent);
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        .search-count {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+        }
+
+        .search-count strong {
+            color: #f6d365;
+        }
+
+        .search-empty {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .search-empty-emoji {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+
+        .search-empty-text {
+            font-size: 16px;
+            color: var(--text-dim);
+            line-height: 1.8;
+        }
+
         /* Responsive */
         @media (min-width: 768px) {
 
             .content,
-            .insp-content {
+            .insp-content,
+            .search-content {
                 padding: 24px 24px 120px;
             }
 
             .header,
-            .insp-header {
+            .insp-header,
+            .search-header {
                 padding: 20px 24px 16px;
             }
         }
@@ -964,10 +1118,28 @@
         </div>
     </div>
 
+    <!-- PAGE 3: Search -->
+    <div class="page" id="pageSearch">
+        <div class="search-header">
+            <h1>🔍 食材搜索</h1>
+            <div class="search-header-sub">输入食材，找到能做的菜</div>
+        </div>
+        <div class="search-content">
+            <div class="search-input-wrap">
+                <input type="text" class="search-input" id="searchInput" placeholder="输入食材，如：鸡胸肉、番茄、豆腐..."
+                    maxlength="20">
+            </div>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+
     <!-- Bottom Tab Bar -->
     <div class="tab-bar">
         <button class="tab-item active" onclick="switchTab('meal')" id="tabMeal">
             <span class="tab-icon">📅</span> 食谱
+        </button>
+        <button class="tab-item" onclick="switchTab('search')" id="tabSearch">
+            <span class="tab-icon">🔍</span> 搜索
         </button>
         <button class="tab-item" onclick="switchTab('insp')" id="tabInsp">
             <span class="tab-icon">💡</span> 灵感
@@ -1152,10 +1324,12 @@
 
         // ======== Tab Switching ========
         function switchTab(tab) {
-            document.getElementById('pageMeal').classList.toggle('active', tab === 'meal');
-            document.getElementById('pageInsp').classList.toggle('active', tab === 'insp');
-            document.getElementById('tabMeal').classList.toggle('active', tab === 'meal');
-            document.getElementById('tabInsp').classList.toggle('active', tab === 'insp');
+            ['meal', 'insp', 'search'].forEach(t => {
+                const page = document.getElementById('page' + t.charAt(0).toUpperCase() + t.slice(1));
+                const tabEl = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+                if (page) page.classList.toggle('active', t === tab);
+                if (tabEl) tabEl.classList.toggle('active', t === tab);
+            });
             if (tab === 'insp') renderInspirations();
         }
 
@@ -1403,6 +1577,60 @@
                 el.textContent = '';
             }
         }
+
+        // ======== Ingredient Search ========
+        const MEAL_TYPES = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' };
+        const MEAL_ICONS = { breakfast: '🌅', lunch: '☀️', dinner: '🌙' };
+
+        function searchIngredient(query) {
+            const container = document.getElementById('searchResults');
+            if (!query) {
+                container.innerHTML = `<div class="search-empty"><div class="search-empty-emoji">🔍</div><div class="search-empty-text">输入食材名称<br>会自动搜索菜谱中的相关菜品</div></div>`;
+                return;
+            }
+            const results = [];
+            for (const [dateStr, dayData] of Object.entries(MEAL_DATA)) {
+                for (const [mealKey, meal] of Object.entries(dayData)) {
+                    if (!meal.items) continue;
+                    const matchedItems = meal.items.filter(item => item.i.includes(query));
+                    if (matchedItems.length > 0) {
+                        results.push({ date: dateStr, mealKey, title: meal.title, items: meal.items, matchedItems, query });
+                    }
+                }
+            }
+            results.sort((a, b) => a.date.localeCompare(b.date));
+            if (results.length === 0) {
+                container.innerHTML = `<div class="search-empty"><div class="search-empty-emoji">😅</div><div class="search-empty-text">没有找到含「${escapeHtml(query)}」的菜<br>试试其他食材吧</div></div>`;
+                return;
+            }
+            let html = `<div class="search-count">找到 <strong>${results.length}</strong> 道相关菜品</div>`;
+            results.forEach(r => {
+                const p = r.date.split('-');
+                const dateLabel = `${parseInt(p[1])}月${parseInt(p[2])}日`;
+                const allIngs = r.items.map(item => {
+                    const name = item.i;
+                    if (name.includes(r.query)) {
+                        return name.replace(r.query, `<mark>${r.query}</mark>`);
+                    }
+                    return name;
+                }).join('、');
+                html += `<div class="search-result-card">
+                    <div class="search-result-title">${r.title}</div>
+                    <div class="search-result-meta">
+                        <span class="search-badge ${r.mealKey}">${MEAL_ICONS[r.mealKey]} ${MEAL_TYPES[r.mealKey]}</span>
+                        <span class="search-badge date">📅 ${dateLabel}</span>
+                    </div>
+                    <div class="search-result-ing">食材：${allIngs}</div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        let searchTimer = null;
+        document.getElementById('searchInput').addEventListener('input', e => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => searchIngredient(e.target.value.trim()), 200);
+        });
 
         updateSyncStatus();
         init();
