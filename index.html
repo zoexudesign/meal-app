@@ -1367,6 +1367,9 @@
                 <button class="dislike-add-btn" onclick="addDislike()">添加</button>
             </div>
             <div class="dislike-hint">💡 支持顿号、逗号分隔批量添加，如：香菜、苦瓜、秋葵</div>
+            <div style="margin-bottom:12px;">
+                <button class="insp-sync-btn" onclick="syncDislikesManual()">☁️ 同步到GitHub</button>
+            </div>
             <div class="dislike-tags" id="dislikeTags"></div>
         </div>
     </div>
@@ -1869,6 +1872,17 @@
         document.getElementById('dislikeInput').addEventListener('keydown', e => {
             if (e.key === 'Enter') { e.preventDefault(); addDislike(); }
         });
+
+        // Manual sync with feedback
+        async function syncDislikesManual() {
+            const token = localStorage.getItem(GH_TOKEN_KEY);
+            if (!token) { openTokenModal(); return; }
+            const list = getDislikes();
+            if (list.length === 0) { showToast('还没有记录不爱吃的食材'); return; }
+            showToast('⏳ 同步中...');
+            await syncDislikesToGitHub();
+            showToast(`☁️ 同步成功！共 ${list.length} 个食材`);
+        }
 
         // Sync dislikes to GitHub
         async function syncDislikesToGitHub() {
