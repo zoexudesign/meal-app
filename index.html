@@ -1904,10 +1904,12 @@ ${dishText}
         // ======== Auto-pull from GitHub on load ========
         async function pullFromGitHub() {
             const token = localStorage.getItem(GH_TOKEN_KEY);
-            if (!token) return;
             try {
+                // Public repo can be fetched without token
+                const headers = { 'Accept': 'application/vnd.github.v3+json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
                 const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                    headers,
                     cache: 'no-store'
                 });
                 if (!res.ok) return;
@@ -1929,6 +1931,7 @@ ${dishText}
                 if (added > 0) {
                     local.sort((a, b) => b.date.localeCompare(a.date));
                     saveInspirations(local);
+                    renderInspirations();
                     showToast(`☁️ 已从云端恢复 ${added} 条记录`);
                 }
             } catch (e) { /* network error, silent fail */ }
