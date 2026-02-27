@@ -1161,14 +1161,42 @@
 
         // ======== Inspiration System ========
         const INSP_KEY = 'meal_inspirations';
-        const FOOD_EMOJIS = ['🍜', '🥘', '🍲', '🥗', '🍛', '🍝', '🥟', '🍤', '🍗', '🥩', '🐟', '🥬', '🍳', '🧆', '🫕', '🥣'];
+
+        // Smart emoji matching
+        const EMOJI_RULES = [
+            { keys: ['鸡', '鸡肉', '鸡腿', '鸡胸', '鸡翅', '白切鸡', '烧鸡'], e: '🍗' },
+            { keys: ['牛', '牛肉', '牛排', '牛腩', '肥牛'], e: '🥩' },
+            { keys: ['猪', '猪肉', '排骨', '五花', '红烧肉', '肉末'], e: '🥓' },
+            { keys: ['鱼', '鲈鱼', '鳕鱼', '三文鱼', '鲭鱼', '秋刀鱼', '金枪鱼', '鲷鱼'], e: '🐟' },
+            { keys: ['虾', '虾仁', '虾滑', '大虾', '龙虾'], e: '🍤' },
+            { keys: ['蟹', '螃蟹', '蛤蜊', '贝', '海鲜'], e: '🦀' },
+            { keys: ['汤', '羹', '浓汤', '炖'], e: '🍲' },
+            { keys: ['面', '意面', '拉面', '乌冬', '河粉', '米粉', '粉'], e: '🍜' },
+            { keys: ['饭', '炒饭', '盖饭', '丼', '饭团', '寿司'], e: '🍚' },
+            { keys: ['饺', '馄饨', '包子', '烧卖', '锅贴'], e: '🥟' },
+            { keys: ['沙拉', '凉拌', '拌'], e: '🥗' },
+            { keys: ['蛋', '煎蛋', '蛋卷', '蛋花'], e: '🍳' },
+            { keys: ['豆腐'], e: '🧈' },
+            { keys: ['咖喱'], e: '🍛' },
+            { keys: ['烤', '烧烤'], e: '🔥' },
+            { keys: ['披萨', '比萨'], e: '🍕' },
+            { keys: ['三明治', '汉堡'], e: '🍔' },
+            { keys: ['春卷', '卷'], e: '🌯' },
+            { keys: ['蔬菜', '青菜', '菠菜', '白菜', '生菜', '芥蓝', '空心菜', '黄瓜', '茄子', '番茄', '西红柿', '南瓜', '萝卜', '菇', '蘑菇', '杏鲍菇'], e: '🥬' },
+        ];
+        const FALLBACK_E = ['🍽️', '🥘', '😋', '✨'];
+        function matchEmoji(dish) {
+            for (const r of EMOJI_RULES) {
+                for (const k of r.keys) { if (dish.includes(k)) return r.e; }
+            }
+            return FALLBACK_E[Math.floor(Math.random() * FALLBACK_E.length)];
+        }
 
         function getInspirations() {
             try { return JSON.parse(localStorage.getItem(INSP_KEY)) || []; }
             catch { return []; }
         }
         function saveInspirations(list) { localStorage.setItem(INSP_KEY, JSON.stringify(list)); }
-        function randomEmoji() { return FOOD_EMOJIS[Math.floor(Math.random() * FOOD_EMOJIS.length)]; }
         function getTodayStr() {
             const now = new Date();
             return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -1182,7 +1210,7 @@
             const list = getInspirations();
             const todayStr = getTodayStr();
             dishes.forEach(dish => {
-                list.unshift({ id: Date.now() + Math.random(), dish, date: todayStr, emoji: randomEmoji() });
+                list.unshift({ id: Date.now() + Math.random(), dish, date: todayStr, emoji: matchEmoji(dish) });
             });
             saveInspirations(list);
             input.value = '';
