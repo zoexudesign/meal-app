@@ -1004,7 +1004,6 @@
         .dislike-section {
             margin-top: 24px;
             padding-top: 20px;
-            padding-bottom: 100px;
             border-top: 1px solid var(--border);
         }
 
@@ -1033,12 +1032,7 @@
         }
 
         .dislike-body {
-            display: none;
             padding-top: 8px;
-        }
-
-        .dislike-section.open .dislike-body {
-            display: block;
         }
 
         .dislike-input-row {
@@ -1356,23 +1350,24 @@
             <div class="ai-result-body" id="aiResultBody"></div>
         </div>
         <div id="inspList"></div>
-        <div class="dislike-section" id="dislikeSection">
-            <div class="dislike-toggle" onclick="toggleDislikeSection()">
-                <span class="dislike-toggle-title">🚫 不爱吃的食材 <span id="dislikeCount"
-                        style="font-weight:400;font-size:13px;color:var(--text-dim);"></span></span>
-                <span class="dislike-toggle-arrow">▼</span>
-            </div>
-            <div class="dislike-body">
-                <div class="dislike-hint">记录不喜欢的食材，生成下月菜单时会自动避开</div>
-                <div class="dislike-input-row">
-                    <input type="text" class="dislike-input" id="dislikeInput" placeholder="输入不爱吃的食材，如：香菜、苦瓜..."
-                        maxlength="30" enterkeyhint="done">
-                    <button class="dislike-add-btn" onclick="addDislike()">添加</button>
-                </div>
-                <div class="dislike-tags" id="dislikeTags"></div>
-            </div>
-        </div>
     </div>
+    </div>
+
+    <!-- PAGE 4: Dislikes -->
+    <div class="page" id="pageDislike">
+        <div class="insp-header">
+            <h1>🚫 不爱吃</h1>
+            <div class="insp-header-sub">记录不喜欢的食材，生成菜单时自动避开</div>
+        </div>
+        <div class="insp-content">
+            <div class="dislike-input-row">
+                <input type="text" class="dislike-input" id="dislikeInput" placeholder="输入不爱吃的食材，如：香菜、苦瓜..."
+                    maxlength="30" enterkeyhint="done">
+                <button class="dislike-add-btn" onclick="addDislike()">添加</button>
+            </div>
+            <div class="dislike-hint">💡 支持顿号、逗号分隔批量添加，如：香菜、苦瓜、秋葵</div>
+            <div class="dislike-tags" id="dislikeTags"></div>
+        </div>
     </div>
 
     <!-- PAGE 3: Search -->
@@ -1400,6 +1395,9 @@
         </button>
         <button class="tab-item" onclick="switchTab('insp')" id="tabInsp">
             <span class="tab-icon">💡</span> 灵感
+        </button>
+        <button class="tab-item" onclick="switchTab('dislike')" id="tabDislike">
+            <span class="tab-icon">🚫</span> 不爱吃
         </button>
     </div>
 
@@ -1656,13 +1654,14 @@
 
         // ======== Tab Switching ========
         function switchTab(tab) {
-            ['meal', 'insp', 'search'].forEach(t => {
+            ['meal', 'insp', 'search', 'dislike'].forEach(t => {
                 const page = document.getElementById('page' + t.charAt(0).toUpperCase() + t.slice(1));
                 const tabEl = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
                 if (page) page.classList.toggle('active', t === tab);
                 if (tabEl) tabEl.classList.toggle('active', t === tab);
             });
             if (tab === 'insp') renderInspirations();
+            if (tab === 'dislike') renderDislikes();
         }
 
         // ======== Inspiration System ========
@@ -1857,8 +1856,6 @@
         function renderDislikes() {
             const list = getDislikes();
             const container = document.getElementById('dislikeTags');
-            const countEl = document.getElementById('dislikeCount');
-            countEl.textContent = list.length > 0 ? `(${list.length})` : '';
             if (list.length === 0) {
                 container.innerHTML = '<div class="dislike-empty">还没有记录不爱吃的食材</div>';
                 return;
@@ -1866,10 +1863,6 @@
             container.innerHTML = list.map(item =>
                 `<span class="dislike-tag">🚫 ${escapeHtml(item)}<button class="dislike-tag-del" onclick="event.stopPropagation();removeDislike('${item.replace(/'/g, "\\'")}')">✕</button></span>`
             ).join('');
-        }
-
-        function toggleDislikeSection() {
-            document.getElementById('dislikeSection').classList.toggle('open');
         }
 
         document.getElementById('dislikeInput').addEventListener('keydown', e => {
