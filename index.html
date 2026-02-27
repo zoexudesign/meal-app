@@ -1303,7 +1303,13 @@
         <div class="header">
             <div class="header-top">
                 <h1>🍽️ 今天吃什么</h1>
-                <span class="month-label">2026年3月</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button class="nav-btn" onclick="switchMonth(-1)" id="prevMonthBtn"
+                        style="padding:4px 8px;font-size:14px;">◀</button>
+                    <span class="month-label" id="monthLabel">2026年3月</span>
+                    <button class="nav-btn" onclick="switchMonth(1)" id="nextMonthBtn"
+                        style="padding:4px 8px;font-size:14px;">▶</button>
+                </div>
             </div>
             <div class="date-strip" id="dateStrip"></div>
         </div>
@@ -1442,33 +1448,72 @@
         const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
         const today = new Date().toISOString().split('T')[0];
 
+        // Detect all months in data
+        const ALL_MONTHS = [...new Set(WORKDAYS.map(d => d.substring(0, 7)))].sort();
+        let currentMonthIdx = 0;
+
         function init() {
+            // Find which month "today" falls in, or use the last month
+            const todayMonth = today.substring(0, 7);
+            const idx = ALL_MONTHS.indexOf(todayMonth);
+            currentMonthIdx = idx >= 0 ? idx : ALL_MONTHS.length - 1;
             buildDateStrip();
-            // Default to today if it's a workday in March 2026, otherwise first workday
+            // Default to today if it's a workday, otherwise first workday of current month
             if (MEAL_DATA[today]) {
                 selectDate(today);
             } else {
-                selectDate(WORKDAYS[0]);
+                const monthPrefix = ALL_MONTHS[currentMonthIdx];
+                const monthWorkdays = WORKDAYS.filter(d => d.startsWith(monthPrefix));
+                selectDate(monthWorkdays[0] || WORKDAYS[0]);
             }
+        }
+
+        function switchMonth(dir) {
+            const newIdx = currentMonthIdx + dir;
+            if (newIdx < 0 || newIdx >= ALL_MONTHS.length) return;
+            currentMonthIdx = newIdx;
+            buildDateStrip();
+            // Select first workday of new month
+            const monthPrefix = ALL_MONTHS[currentMonthIdx];
+            const monthWorkdays = WORKDAYS.filter(d => d.startsWith(monthPrefix));
+            if (monthWorkdays.length > 0) selectDate(monthWorkdays[0]);
+            updateMonthNav();
+        }
+
+        function updateMonthNav() {
+            document.getElementById('prevMonthBtn').disabled = currentMonthIdx <= 0;
+            document.getElementById('nextMonthBtn').disabled = currentMonthIdx >= ALL_MONTHS.length - 1;
         }
 
         function buildDateStrip() {
             const strip = document.getElementById('dateStrip');
+            const monthStr = ALL_MONTHS[currentMonthIdx]; // e.g. "2026-03"
+            const [year, month] = monthStr.split('-').map(Number);
+            document.getElementById('monthLabel').textContent = `${year}年${month}月`;
+            updateMonthNav();
+
+            const daysInMonth = new Date(year, month, 0).getDate();
             let html = '';
             let lastWeek = -1;
-            for (let d = 1; d <= 31; d++) {
-                const dateStr = `2026-03-${String(d).padStart(2, '0')}`;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dateObj = new Date(dateStr + 'T00:00:00');
                 const dow = dateObj.getDay();
-                const weekNum = Math.ceil((d + (new Date('2026-03-01T00:00:00').getDay())) / 7);
+                const weekNum = Math.ceil((d + dateObj.getDay()) / 7);
                 if (dow === 1 && lastWeek !== -1) {
                     html += '<div class="week-sep"></div>';
                 }
                 lastWeek = weekNum;
-                const isWorkday = MEAL_DATA[dateStr];
                 const isToday = dateStr === today;
                 const isWeekend = dow === 0 || dow === 6;
+                const hasData = !!MEAL_DATA[dateStr];
                 if (isWeekend) {
+                    html += `<div class="date-btn weekend">
+          <span class="date-weekday">周${WEEKDAYS[dow]}</span>
+          <span class="date-day">休</span>
+        </div>`;
+                } else if (!hasData) {
+                    // Non-weekend holiday
                     html += `<div class="date-btn weekend">
           <span class="date-weekday">周${WEEKDAYS[dow]}</span>
           <span class="date-day">休</span>
@@ -1570,11 +1615,26 @@
             const idx = WORKDAYS.indexOf(currentDate);
             const newIdx = idx + dir;
             if (newIdx >= 0 && newIdx < WORKDAYS.length) {
-                selectDate(WORKDAYS[newIdx]);
+                const newDate = WORKDAYS[newIdx];
+                // Auto-switch month if needed
+                const newMonth = newDate.substring(0, 7);
+                const monthIdx = ALL_MONTHS.indexOf(newMonth);
+                if (monthIdx !== currentMonthIdx) {
+                    currentMonthIdx = monthIdx;
+                    buildDateStrip();
+                }
+                selectDate(newDate);
             }
         }
 
         function goToday() {
+            // Switch to today's month
+            const todayMonth = today.substring(0, 7);
+            const monthIdx = ALL_MONTHS.indexOf(todayMonth);
+            if (monthIdx >= 0 && monthIdx !== currentMonthIdx) {
+                currentMonthIdx = monthIdx;
+                buildDateStrip();
+            }
             if (MEAL_DATA[today]) {
                 selectDate(today);
             } else {
