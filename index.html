@@ -902,6 +902,110 @@
             transform: translate(-50%, -50%) scale(1);
         }
 
+        /* AI Analysis */
+        .ai-analyze-btn {
+            background: linear-gradient(135deg, #f6d365, #fda085);
+            border: none;
+            color: #1a1d27;
+            border-radius: 10px;
+            padding: 6px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .ai-analyze-btn:hover {
+            opacity: 0.9;
+        }
+
+        .ai-analyze-btn:active {
+            transform: scale(0.95);
+        }
+
+        .ai-analyze-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+            transform: none;
+        }
+
+        .ai-result {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 18px;
+            margin-top: 16px;
+            margin-bottom: 16px;
+            animation: slideUp 0.4s ease;
+            display: none;
+        }
+
+        .ai-result.show {
+            display: block;
+        }
+
+        .ai-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .ai-result-title {
+            font-size: 15px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #f6d365, #fda085);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .ai-result-close {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .ai-result-body {
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .ai-result-body strong {
+            color: var(--accent);
+        }
+
+        .ai-loading {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-dim);
+            font-size: 14px;
+        }
+
+        .ai-loading-spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border);
+            border-top-color: #f6d365;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         /* Search Page */
         .search-header {
             position: sticky;
@@ -1108,14 +1212,24 @@
             </div>
             <div class="insp-toolbar" id="inspToolbar" style="display:none;">
                 <span class="insp-count">共记录 <strong id="inspCount">0</strong> 道菜</span>
-                <div style="display:flex;gap:8px;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <button class="insp-export-btn" onclick="exportInspirations()">📋 导出</button>
                     <button class="insp-sync-btn" id="syncBtn" onclick="syncToGitHub()">☁️ 同步</button>
+                    <button class="ai-analyze-btn" id="aiBtn" onclick="analyzeInspirations()">🧠 AI总结</button>
                 </div>
             </div>
-            <div class="sync-status" id="syncStatus"></div>
-            <div id="inspList"></div>
         </div>
+        <div class="sync-status" id="syncStatus"></div>
+        <div class="ai-result" id="aiResult">
+            <div class="ai-result-header">
+                <span class="ai-result-title">🧠 AI 分析</span>
+                <button class="ai-result-close"
+                    onclick="document.getElementById('aiResult').classList.remove('show')">✕</button>
+            </div>
+            <div class="ai-result-body" id="aiResultBody"></div>
+        </div>
+        <div id="inspList"></div>
+    </div>
     </div>
 
     <!-- PAGE 3: Search -->
@@ -1158,6 +1272,22 @@
             <div class="modal-btns">
                 <button class="modal-btn-cancel" onclick="closeTokenModal()">取消</button>
                 <button class="modal-btn-ok" onclick="saveTokenAndSync()">保存并同步</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gemini API Key Modal -->
+    <div class="modal-overlay" id="geminiModal">
+        <div class="modal-box">
+            <div class="modal-title">🧠 设置 Gemini API Key</div>
+            <div class="modal-desc">
+                首次使用 AI 分析需要配置 API Key。请前往
+                <strong>aistudio.google.com</strong> 获取免费的 Gemini API Key。
+            </div>
+            <input type="password" class="modal-input" id="geminiKeyInput" placeholder="AIzaSy...">
+            <div class="modal-btns">
+                <button class="modal-btn-cancel" onclick="closeGeminiModal()">取消</button>
+                <button class="modal-btn-ok" onclick="saveGeminiKeyAndAnalyze()">保存并分析</button>
             </div>
         </div>
     </div>
@@ -1594,6 +1724,89 @@
                 el.innerHTML = `<span class="sync-ok">✓</span> 上次同步：${lastSync}`;
             } else {
                 el.textContent = '';
+            }
+        }
+
+        // ======== AI Analysis (Gemini) ========
+        const GEMINI_KEY_STORE = 'meal_gemini_key';
+
+        function openGeminiModal() { document.getElementById('geminiModal').classList.add('show'); }
+        function closeGeminiModal() { document.getElementById('geminiModal').classList.remove('show'); }
+
+        function saveGeminiKeyAndAnalyze() {
+            const key = document.getElementById('geminiKeyInput').value.trim();
+            if (!key) { showToast('请输入 API Key'); return; }
+            localStorage.setItem(GEMINI_KEY_STORE, key);
+            closeGeminiModal();
+            analyzeInspirations();
+        }
+
+        async function analyzeInspirations() {
+            const apiKey = localStorage.getItem(GEMINI_KEY_STORE);
+            if (!apiKey) { openGeminiModal(); return; }
+
+            const list = getInspirations();
+            if (list.length === 0) { showToast('还没有记录哦'); return; }
+
+            const btn = document.getElementById('aiBtn');
+            const resultPanel = document.getElementById('aiResult');
+            const resultBody = document.getElementById('aiResultBody');
+
+            btn.disabled = true;
+            btn.textContent = '⚙️ 分析中...';
+            resultPanel.classList.add('show');
+            resultBody.innerHTML = '<div class="ai-loading"><div class="ai-loading-spinner"></div><div>正在分析你的口味偏好...</div></div>';
+
+            // Build dish list grouped by date
+            const groups = {};
+            list.forEach(item => { if (!groups[item.date]) groups[item.date] = []; groups[item.date].push(item.dish); });
+            const sortedDates = Object.keys(groups).sort();
+            let dishText = sortedDates.map(d => `${d}: ${groups[d].join('、')}`).join('\n');
+
+            const prompt = `你是一位专业的营养师和美食顾问。以下是用户近期记录的美食灵感：
+
+${dishText}
+
+请分析并回复（用中文，简洁友好，适合手机阅读）：
+
+1. 🌟 口味偏好分析：总结用户喜欢的菜系、食材、烹饪方式
+2. 🥗 营养均衡评估：点评蛋白质/蔬菜/碳水的均衡情况，给出建议
+3. 🍽️ 推荐 3-5 道新菜：基于用户口味推荐之前没记录过的菜，简要说明理由
+
+注意：回复要简洁，每个部分 2-3 行就好，不要太长。用 emoji 视觉化。`;
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '分析结果为空';
+                    // Simple markdown-like formatting
+                    const formatted = text
+                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/^### (.+)$/gm, '<strong>$1</strong>')
+                        .replace(/^## (.+)$/gm, '<strong>$1</strong>')
+                        .replace(/^# (.+)$/gm, '<strong>$1</strong>');
+                    resultBody.innerHTML = formatted;
+                } else if (res.status === 400 || res.status === 403) {
+                    localStorage.removeItem(GEMINI_KEY_STORE);
+                    resultPanel.classList.remove('show');
+                    showToast('API Key 无效，请重新设置');
+                    openGeminiModal();
+                } else {
+                    resultBody.innerHTML = '分析失败，请稍后重试';
+                }
+            } catch (e) {
+                resultBody.innerHTML = '网络错误，请检查网络连接';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🧠 AI总结';
             }
         }
 
