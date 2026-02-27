@@ -1795,12 +1795,47 @@ ${dishText}
                         .replace(/^# (.+)$/gm, '<strong>$1</strong>');
                     resultBody.innerHTML = formatted;
                 } else if (res.status === 400 || res.status === 403) {
+                    let errMsg = '';
+                    try { const errData = await res.json(); errMsg = errData.error?.message || ''; } catch (e) { }
+                    console.error('Gemini API Key error:', res.status, errMsg);
                     localStorage.removeItem(GEMINI_KEY_STORE);
                     resultPanel.classList.remove('show');
                     showToast('API Key 无效，请重新设置');
                     openGeminiModal();
+                } else if (res.status === 404) {
+                    // Model not found, try fallback model
+                    console.warn('Model not found, trying fallback model...');
+                    resultBody.innerHTML = '<div class="ai-loading"><div class="ai-loading-spinner"></div><div>切换模型重试中...</div></div>';
+                    try {
+                        const res2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        });
+                        if (res2.ok) {
+                            const data2 = await res2.json();
+                            const text2 = data2.candidates?.[0]?.content?.parts?.[0]?.text || '分析结果为空';
+                            const formatted2 = text2
+                                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                                .replace(/^### (.+)$/gm, '<strong>$1</strong>')
+                                .replace(/^## (.+)$/gm, '<strong>$1</strong>')
+                                .replace(/^# (.+)$/gm, '<strong>$1</strong>');
+                            resultBody.innerHTML = formatted2;
+                        } else {
+                            let errMsg2 = '';
+                            try { const e2 = await res2.json(); errMsg2 = e2.error?.message || ''; } catch (e) { }
+                            resultBody.innerHTML = `分析失败 (${res2.status})：${escapeHtml(errMsg2) || '请稍后重试'}`;
+                        }
+                    } catch (e2) {
+                        resultBody.innerHTML = '备用模型也连接失败，请检查网络';
+                    }
+                } else if (res.status === 429) {
+                    resultBody.innerHTML = '⚠️ API 调用次数超限，请等一分钟后再试';
                 } else {
-                    resultBody.innerHTML = '分析失败，请稍后重试';
+                    let errMsg = '';
+                    try { const errData = await res.json(); errMsg = errData.error?.message || ''; } catch (e) { }
+                    console.error('Gemini API error:', res.status, errMsg);
+                    resultBody.innerHTML = `分析失败 (${res.status})：${escapeHtml(errMsg) || '请稍后重试'}`;
                 }
             } catch (e) {
                 resultBody.innerHTML = '网络错误，请检查网络连接';
