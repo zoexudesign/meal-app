@@ -1633,6 +1633,41 @@
         });
 
         updateSyncStatus();
+
+        // ======== Auto-pull from GitHub on load ========
+        async function pullFromGitHub() {
+            const token = localStorage.getItem(GH_TOKEN_KEY);
+            if (!token) return;
+            try {
+                const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                    cache: 'no-store'
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                if (!json.inspirations || json.inspirations.length === 0) return;
+                const local = getInspirations();
+                // Merge: use dish+date as unique key
+                const keyOf = item => item.dish + '|' + item.date;
+                const existing = new Set(local.map(keyOf));
+                let added = 0;
+                json.inspirations.forEach(item => {
+                    if (!existing.has(keyOf(item))) {
+                        local.push(item);
+                        existing.add(keyOf(item));
+                        added++;
+                    }
+                });
+                if (added > 0) {
+                    local.sort((a, b) => b.date.localeCompare(a.date));
+                    saveInspirations(local);
+                    showToast(`☁️ 已从云端恢复 ${added} 条记录`);
+                }
+            } catch (e) { /* network error, silent fail */ }
+        }
+        pullFromGitHub();
+
         init();
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
