@@ -1276,18 +1276,23 @@
         </div>
     </div>
 
-    <!-- Gemini API Key Modal -->
-    <div class="modal-overlay" id="geminiModal">
+    <!-- AI Settings Modal -->
+    <div class="modal-overlay" id="aiModal">
         <div class="modal-box">
-            <div class="modal-title">🧠 设置 Gemini API Key</div>
-            <div class="modal-desc">
-                首次使用 AI 分析需要配置 API Key。请前往
-                <strong>aistudio.google.com</strong> 获取免费的 Gemini API Key。
+            <div class="modal-title">🧠 AI 分析设置</div>
+            <div class="modal-desc">选择 AI 提供商并配置 API Key</div>
+            <div style="margin-bottom:12px;">
+                <select class="modal-input" id="aiProviderSelect" onchange="updateAiModalHint()"
+                    style="padding:10px 14px;appearance:auto;">
+                    <option value="gemini">Gemini（Google 免费）</option>
+                    <option value="deepseek">DeepSeek（超便宜）</option>
+                </select>
             </div>
-            <input type="password" class="modal-input" id="geminiKeyInput" placeholder="AIzaSy...">
+            <div class="modal-desc" id="aiProviderHint" style="font-size:12px;margin-bottom:8px;opacity:0.7;"></div>
+            <input type="password" class="modal-input" id="aiKeyInput" placeholder="">
             <div class="modal-btns">
-                <button class="modal-btn-cancel" onclick="closeGeminiModal()">取消</button>
-                <button class="modal-btn-ok" onclick="saveGeminiKeyAndAnalyze()">保存并分析</button>
+                <button class="modal-btn-cancel" onclick="closeAiModal()">取消</button>
+                <button class="modal-btn-ok" onclick="saveAiKeyAndAnalyze()">保存并分析</button>
             </div>
         </div>
     </div>
@@ -1727,23 +1732,94 @@
             }
         }
 
-        // ======== AI Analysis (Gemini) ========
-        const GEMINI_KEY_STORE = 'meal_gemini_key';
+        // ======== AI Analysis (Multi-Provider) ========
+        const AI_PROVIDER_KEY = 'meal_ai_provider';
+        const AI_KEYS_STORE = { gemini: 'meal_gemini_key', deepseek: 'meal_deepseek_key' };
 
-        function openGeminiModal() { document.getElementById('geminiModal').classList.add('show'); }
-        function closeGeminiModal() { document.getElementById('geminiModal').classList.remove('show'); }
+        const AI_PROVIDERS = {
+            gemini: {
+                name: 'Gemini',
+                hint: '前往 <strong>aistudio.google.com</strong> 获取免费 API Key',
+                placeholder: 'AIzaSy...',
+                call: async (apiKey, prompt) => {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    if (!res.ok) throw { status: res.status, data: await res.json().catch(() => ({})) };
+                    const data = await res.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || '分析结果为空';
+                }
+            },
+            deepseek: {
+                name: 'DeepSeek',
+                hint: '前往 <strong>platform.deepseek.com</strong> 获取 API Key，价格极低',
+                placeholder: 'sk-...',
+                call: async (apiKey, prompt) => {
+                    const res = await fetch('https://api.deepseek.com/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                        body: JSON.stringify({
+                            model: 'deepseek-chat',
+                            messages: [{ role: 'user', content: prompt }],
+                            max_tokens: 1024
+                        })
+                    });
+                    if (!res.ok) throw { status: res.status, data: await res.json().catch(() => ({})) };
+                    const data = await res.json();
+                    return data.choices?.[0]?.message?.content || '分析结果为空';
+                }
+            }
+        };
 
-        function saveGeminiKeyAndAnalyze() {
-            const key = document.getElementById('geminiKeyInput').value.trim();
+        function getAiProvider() { return localStorage.getItem(AI_PROVIDER_KEY) || 'gemini'; }
+
+        function openAiModal() {
+            const modal = document.getElementById('aiModal');
+            const select = document.getElementById('aiProviderSelect');
+            const input = document.getElementById('aiKeyInput');
+            select.value = getAiProvider();
+            // Pre-fill existing key if any
+            const existingKey = localStorage.getItem(AI_KEYS_STORE[select.value]);
+            input.value = existingKey || '';
+            updateAiModalHint();
+            modal.classList.add('show');
+        }
+        function closeAiModal() { document.getElementById('aiModal').classList.remove('show'); }
+
+        function updateAiModalHint() {
+            const provider = document.getElementById('aiProviderSelect').value;
+            const cfg = AI_PROVIDERS[provider];
+            document.getElementById('aiProviderHint').innerHTML = cfg.hint;
+            document.getElementById('aiKeyInput').placeholder = cfg.placeholder;
+            // Load existing key for this provider
+            const existingKey = localStorage.getItem(AI_KEYS_STORE[provider]);
+            document.getElementById('aiKeyInput').value = existingKey || '';
+        }
+
+        function saveAiKeyAndAnalyze() {
+            const provider = document.getElementById('aiProviderSelect').value;
+            const key = document.getElementById('aiKeyInput').value.trim();
             if (!key) { showToast('请输入 API Key'); return; }
-            localStorage.setItem(GEMINI_KEY_STORE, key);
-            closeGeminiModal();
+            localStorage.setItem(AI_PROVIDER_KEY, provider);
+            localStorage.setItem(AI_KEYS_STORE[provider], key);
+            closeAiModal();
             analyzeInspirations();
         }
 
+        function formatAiText(text) {
+            return text
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^### (.+)$/gm, '<strong>$1</strong>')
+                .replace(/^## (.+)$/gm, '<strong>$1</strong>')
+                .replace(/^# (.+)$/gm, '<strong>$1</strong>');
+        }
+
         async function analyzeInspirations() {
-            const apiKey = localStorage.getItem(GEMINI_KEY_STORE);
-            if (!apiKey) { openGeminiModal(); return; }
+            const provider = getAiProvider();
+            const apiKey = localStorage.getItem(AI_KEYS_STORE[provider]);
+            if (!apiKey) { openAiModal(); return; }
 
             const list = getInspirations();
             if (list.length === 0) { showToast('还没有记录哦'); return; }
@@ -1751,11 +1827,12 @@
             const btn = document.getElementById('aiBtn');
             const resultPanel = document.getElementById('aiResult');
             const resultBody = document.getElementById('aiResultBody');
+            const cfg = AI_PROVIDERS[provider];
 
             btn.disabled = true;
             btn.textContent = '⚙️ 分析中...';
             resultPanel.classList.add('show');
-            resultBody.innerHTML = '<div class="ai-loading"><div class="ai-loading-spinner"></div><div>正在分析你的口味偏好...</div></div>';
+            resultBody.innerHTML = `<div class="ai-loading"><div class="ai-loading-spinner"></div><div>正在用 ${cfg.name} 分析口味偏好...</div></div>`;
 
             // Build dish list grouped by date
             const groups = {};
@@ -1763,82 +1840,28 @@
             const sortedDates = Object.keys(groups).sort();
             let dishText = sortedDates.map(d => `${d}: ${groups[d].join('、')}`).join('\n');
 
-            const prompt = `你是一位专业的营养师和美食顾问。以下是用户近期记录的美食灵感：
-
-${dishText}
-
-请分析并回复（用中文，简洁友好，适合手机阅读）：
-
-1. 🌟 口味偏好分析：总结用户喜欢的菜系、食材、烹饪方式
-2. 🥗 营养均衡评估：点评蛋白质/蔬菜/碳水的均衡情况，给出建议
-3. 🍽️ 推荐 3-5 道新菜：基于用户口味推荐之前没记录过的菜，简要说明理由
-
-注意：回复要简洁，每个部分 2-3 行就好，不要太长。用 emoji 视觉化。`;
+            const prompt = `你是一位专业的营养师和美食顾问。以下是用户近期记录的美食灵感：\n\n${dishText}\n\n请分析并回复（用中文，简洁友好，适合手机阅读）：\n\n1. 🌟 口味偏好分析：总结用户喜欢的菜系、食材、烹饪方式\n2. 🥗 营养均衡评估：点评蛋白质/蔬菜/碳水的均衡情况，给出建议\n3. 🍽️ 推荐 3-5 道新菜：基于用户口味推荐之前没记录过的菜，简要说明理由\n\n注意：回复要简洁，每个部分 2-3 行就好，不要太长。用 emoji 视觉化。`;
 
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '分析结果为空';
-                    // Simple markdown-like formatting
-                    const formatted = text
-                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/^### (.+)$/gm, '<strong>$1</strong>')
-                        .replace(/^## (.+)$/gm, '<strong>$1</strong>')
-                        .replace(/^# (.+)$/gm, '<strong>$1</strong>');
-                    resultBody.innerHTML = formatted;
-                } else if (res.status === 400 || res.status === 403) {
-                    let errMsg = '';
-                    try { const errData = await res.json(); errMsg = errData.error?.message || ''; } catch (e) { }
-                    console.error('Gemini API Key error:', res.status, errMsg);
-                    localStorage.removeItem(GEMINI_KEY_STORE);
-                    resultPanel.classList.remove('show');
-                    showToast('API Key 无效，请重新设置');
-                    openGeminiModal();
-                } else if (res.status === 404) {
-                    // Model not found, try fallback model
-                    console.warn('Model not found, trying fallback model...');
-                    resultBody.innerHTML = '<div class="ai-loading"><div class="ai-loading-spinner"></div><div>切换模型重试中...</div></div>';
-                    try {
-                        const res2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                        });
-                        if (res2.ok) {
-                            const data2 = await res2.json();
-                            const text2 = data2.candidates?.[0]?.content?.parts?.[0]?.text || '分析结果为空';
-                            const formatted2 = text2
-                                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                                .replace(/^### (.+)$/gm, '<strong>$1</strong>')
-                                .replace(/^## (.+)$/gm, '<strong>$1</strong>')
-                                .replace(/^# (.+)$/gm, '<strong>$1</strong>');
-                            resultBody.innerHTML = formatted2;
-                        } else {
-                            let errMsg2 = '';
-                            try { const e2 = await res2.json(); errMsg2 = e2.error?.message || ''; } catch (e) { }
-                            resultBody.innerHTML = `分析失败 (${res2.status})：${escapeHtml(errMsg2) || '请稍后重试'}`;
-                        }
-                    } catch (e2) {
-                        resultBody.innerHTML = '备用模型也连接失败，请检查网络';
-                    }
-                } else if (res.status === 429) {
-                    resultBody.innerHTML = '⚠️ API 调用次数超限，请等一分钟后再试';
-                } else {
-                    let errMsg = '';
-                    try { const errData = await res.json(); errMsg = errData.error?.message || ''; } catch (e) { }
-                    console.error('Gemini API error:', res.status, errMsg);
-                    resultBody.innerHTML = `分析失败 (${res.status})：${escapeHtml(errMsg) || '请稍后重试'}`;
-                }
+                const text = await cfg.call(apiKey, prompt);
+                resultBody.innerHTML = formatAiText(text);
             } catch (e) {
-                resultBody.innerHTML = '网络错误，请检查网络连接';
+                if (e.status) {
+                    const errMsg = e.data?.error?.message || e.data?.message || '';
+                    if (e.status === 401 || e.status === 400 || e.status === 403) {
+                        console.error(`${cfg.name} API Key error:`, e.status, errMsg);
+                        localStorage.removeItem(AI_KEYS_STORE[provider]);
+                        resultPanel.classList.remove('show');
+                        showToast('API Key 无效，请重新设置');
+                        openAiModal();
+                    } else if (e.status === 429) {
+                        resultBody.innerHTML = '⚠️ API 调用次数超限，请等一分钟后再试';
+                    } else {
+                        resultBody.innerHTML = `分析失败 (${e.status})：${escapeHtml(errMsg) || '请稍后重试'}`;
+                    }
+                } else {
+                    resultBody.innerHTML = '网络错误，请检查网络连接';
+                }
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🧠 AI总结';
