@@ -1338,6 +1338,8 @@
                     <button class="insp-export-btn" onclick="exportInspirations()">📋 导出</button>
                     <button class="insp-sync-btn" id="syncBtn" onclick="syncToGitHub()">☁️ 同步</button>
                     <button class="ai-analyze-btn" id="aiBtn" onclick="analyzeInspirations()">🧠 AI总结</button>
+                    <button class="insp-export-btn" onclick="fullReset()"
+                        style="background:rgba(255,107,107,0.12);color:#ff6b6b;">🔄 刷新数据</button>
                 </div>
             </div>
         </div>
@@ -1977,6 +1979,28 @@
             }
         }
 
+        // Full reset: clear SW + caches + localStorage, then reload
+        async function fullReset() {
+            if (!confirm('确定要刷新数据吗？将清除本地缓存并重新从云端拉取。')) return;
+            showToast('⏳ 正在刷新...');
+            try {
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of regs) await reg.unregister();
+                }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (const key of keys) await caches.delete(key);
+                }
+                const keepKeys = ['meal_gh_token', 'meal_ai_key', 'meal_ai_provider'];
+                Object.keys(localStorage).forEach(k => {
+                    if (!keepKeys.includes(k)) localStorage.removeItem(k);
+                });
+                window.location.reload(true);
+            } catch (e) {
+                showToast('❌ 刷新失败: ' + e.message);
+            }
+        }
         // ======== GitHub Sync ========
 
         function openTokenModal() { document.getElementById('tokenModal').classList.add('show'); }
