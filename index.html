@@ -1958,7 +1958,24 @@
         pullDislikesFromGitHub();
         renderDislikes();
 
-        // Pull inspirations from local file (same GitHub Pages origin)
+        // Hardcoded fallback data - always available, no network needed
+        const FALLBACK_INSPIRATIONS = [
+            { id: 1772345896672.2317, dish: "沙葱炒鸡蛋", date: "2026-03-01", emoji: "🥚" },
+            { id: 1772210631493.6392, dish: "煎鸡腿排", date: "2026-02-28", emoji: "🍗" },
+            { id: 1772210608834.2742, dish: "牛油果金枪鱼拌饭", date: "2026-02-28", emoji: "🥑" },
+            { id: 1772173857720.5847, dish: "拌黄瓜杏鲍菇", date: "2026-02-27", emoji: "🥗" },
+            { id: 1772173846923.257, dish: "意式番茄蔬菜汤", date: "2026-02-27", emoji: "🍲" },
+            { id: 1772173823696.4912, dish: "白切鸡", date: "2026-02-27", emoji: "🍗" },
+            { id: 1772174649806.1675, dish: "清蒸鲈鱼", date: "2026-02-27", emoji: "🐟" }
+        ];
+
+        // If localStorage is empty, seed with fallback data immediately
+        if (getInspirations().length === 0) {
+            saveInspirations(FALLBACK_INSPIRATIONS);
+            renderInspirations();
+        }
+
+        // Also try to pull latest from file (will merge with local data)
         async function pullFromGitHub() {
             try {
                 const res = await fetch('./inspirations.json', { cache: 'no-store' });
@@ -1980,9 +1997,7 @@
                 }
             } catch (e) { /* silent */ }
         }
-
-        // Auto-pull inspirations on page load if localStorage is empty
-        if (getInspirations().length === 0) pullFromGitHub();
+        pullFromGitHub();
 
         // ======== GitHub Sync ========
 
