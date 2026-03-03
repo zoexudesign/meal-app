@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重置缓存</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .box {
+            text-align: center;
+            max-width: 360px;
+        }
+
+        .emoji {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .status {
+            font-size: 15px;
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        .status.done {
+            color: #4ecdc4;
+        }
+
+        .status.error {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="box">
+        <div class="emoji">🔄</div>
+        <div class="title">正在重置缓存...</div>
+        <div class="status" id="status">清除中，请稍候</div>
+    </div>
+    <script>
+        const statusEl = document.getElementById('status');
+        async function reset() {
+            try {
+                // 1. Unregister all service workers
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of regs) {
+                        await reg.unregister();
+                    }
+                    statusEl.textContent = `已清除 ${regs.length} 个 Service Worker`;
+                }
+                // 2. Delete all caches
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (const key of keys) {
+                        await caches.delete(key);
+                    }
+                    statusEl.textContent += `\n已清除 ${keys.length} 个缓存`;
+                }
+                // 3. Clear localStorage inspiration data so it re-pulls
+                // (keep the token if user has set one)
+                // 4. Redirect
+                statusEl.className = 'status done';
+                statusEl.textContent = '✅ 缓存已清除！正在跳转...';
+                setTimeout(() => {
+                    window.location.replace('./index.html?reset=' + Date.now());
+                }, 1500);
+            } catch (e) {
+                statusEl.className = 'status error';
+                statusEl.textContent = '❌ 清除失败: ' + e.message;
+            }
+        }
+        reset();
+    </script>
+</body>
+
+</html>
