@@ -82,7 +82,14 @@
                     statusEl.textContent += `\n已清除 ${keys.length} 个缓存`;
                 }
                 // 3. Clear localStorage inspiration data so it re-pulls
-                // (keep the token if user has set one)
+                // (keep the token and AI keys if user has set them)
+                const keepKeys = ['meal_gh_token', 'meal_ai_key', 'meal_ai_provider'];
+                const allKeys = Object.keys(localStorage);
+                let cleared = 0;
+                allKeys.forEach(k => {
+                    if (!keepKeys.includes(k)) { localStorage.removeItem(k); cleared++; }
+                });
+                statusEl.textContent += `\n已清除 ${cleared} 条本地数据`;
                 // 4. Redirect
                 statusEl.className = 'status done';
                 statusEl.textContent = '✅ 缓存已清除！正在跳转...';
