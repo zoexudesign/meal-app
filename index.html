@@ -1337,6 +1337,7 @@
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <button class="insp-export-btn" onclick="exportInspirations()">📋 导出</button>
                     <button class="insp-sync-btn" id="syncBtn" onclick="syncToGitHub()">☁️ 同步</button>
+                    <button class="insp-sync-btn" onclick="resetCache()">🔄 恢复</button>
                     <button class="ai-analyze-btn" id="aiBtn" onclick="analyzeInspirations()">🧠 AI总结</button>
                 </div>
             </div>
@@ -1748,7 +1749,7 @@
             const countEl = document.getElementById('inspCount');
             if (list.length === 0) {
                 toolbar.style.display = 'none';
-                container.innerHTML = `<div class="insp-empty"><div class="insp-empty-emoji">🍽️</div><div class="insp-empty-text">还没有记录<br>想到好吃的就赶紧记下来吧！</div></div>`;
+                container.innerHTML = `<div class="insp-empty"><div class="insp-empty-emoji">🍽️</div><div class="insp-empty-text">还没有记录<br>想到好吃的就赶紧记下来吧！</div><button onclick="resetCache()" style="margin-top:16px;padding:10px 24px;border:none;border-radius:12px;background:rgba(78,205,196,0.15);color:#4ecdc4;font-size:14px;cursor:pointer;">🔄 恢复数据</button></div>`;
                 return;
             }
             toolbar.style.display = 'flex';
@@ -1998,6 +1999,24 @@
             } catch (e) { /* silent */ }
         }
         pullFromGitHub();
+
+        // Reset cache and reload (clears old Service Worker)
+        async function resetCache() {
+            showToast('⏳ 正在恢复数据...');
+            try {
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of regs) await reg.unregister();
+                }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (const key of keys) await caches.delete(key);
+                }
+                window.location.reload(true);
+            } catch (e) {
+                showToast('❌ 恢复失败: ' + e.message);
+            }
+        }
 
         // ======== GitHub Sync ========
 
