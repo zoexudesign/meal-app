@@ -1924,13 +1924,22 @@
 
         // Pull dislikes from GitHub on load
         async function pullDislikesFromGitHub() {
-            const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
             try {
-                const headers = { 'Accept': 'application/vnd.github.v3+json' };
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-                const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_DISLIKE_FILE}`, {
-                    headers, cache: 'no-store'
-                });
+                const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
+                const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_DISLIKE_FILE}`;
+                let res;
+                if (token) {
+                    res = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                        cache: 'no-store'
+                    });
+                }
+                if (!res || !res.ok) {
+                    res = await fetch(url, {
+                        headers: { 'Accept': 'application/vnd.github.v3+json' },
+                        cache: 'no-store'
+                    });
+                }
                 if (!res.ok) return;
                 const data = await res.json();
                 const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
@@ -1951,13 +1960,23 @@
 
         // Pull inspirations from GitHub (used on first load when localStorage is empty)
         async function pullFromGitHub() {
-            const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
             try {
-                const headers = { 'Accept': 'application/vnd.github.v3+json' };
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-                const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
-                    headers, cache: 'no-store'
-                });
+                const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
+                const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+                // Try with token first, fall back to public access if token is expired
+                let res;
+                if (token) {
+                    res = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                        cache: 'no-store'
+                    });
+                }
+                if (!res || !res.ok) {
+                    res = await fetch(url, {
+                        headers: { 'Accept': 'application/vnd.github.v3+json' },
+                        cache: 'no-store'
+                    });
+                }
                 if (!res.ok) return;
                 const data = await res.json();
                 const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
