@@ -1664,7 +1664,11 @@
                 if (page) page.classList.toggle('active', t === tab);
                 if (tabEl) tabEl.classList.toggle('active', t === tab);
             });
-            if (tab === 'insp') renderInspirations();
+            if (tab === 'insp') {
+                renderInspirations();
+                // If empty, try pulling from GitHub (handles race with initial load)
+                if (getInspirations().length === 0) pullFromGitHub();
+            }
             if (tab === 'dislike') renderDislikes();
         }
 
@@ -1822,7 +1826,7 @@
 
         // ======== GitHub Config (shared) ========
         const GH_TOKEN_KEY = 'meal_gh_token';
-        const GH_DEFAULT_TOKEN = atob('Z2l0aHViX3BhdF8xMUFENFdaU0kwRU5vcE5VMGRsZ2JXX2x4VzhuSGo2bXN0OHlKczZpWUpKaW51Qm1ob2NTN3pkOHdOaHFwVjhqTllYRERJWUpVTVlJM25GazhwRg==');
+        const GH_DEFAULT_TOKEN = atob('Z2l0aHViX3BhdF8xMUFENFdaU0kwRU5vcE5VMGRsZ2JXX2x4VzhuSGo2bXN0OHlKczZpWUppbnVCbWhvY1M3emQ4d05ocXBWOGpOWVhERElZSlVNWUkzbkZrOHBG');
         const GH_OWNER = 'zoexudesign';
         const GH_REPO = 'meal-app';
         const GH_FILE = 'inspirations.json';
@@ -1944,6 +1948,38 @@
         }
         pullDislikesFromGitHub();
         renderDislikes();
+
+        // Pull inspirations from GitHub (used on first load when localStorage is empty)
+        async function pullFromGitHub() {
+            const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
+            try {
+                const headers = { 'Accept': 'application/vnd.github.v3+json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+                    headers, cache: 'no-store'
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                if (!json.inspirations || json.inspirations.length === 0) return;
+                const local = getInspirations();
+                const keyOf = item => item.dish + '|' + item.date;
+                const seen = new Set(local.map(keyOf));
+                let added = 0;
+                json.inspirations.forEach(item => {
+                    const k = keyOf(item);
+                    if (!seen.has(k)) { seen.add(k); local.push(item); added++; }
+                });
+                if (added > 0) {
+                    local.sort((a, b) => b.date.localeCompare(a.date));
+                    saveInspirations(local);
+                    renderInspirations();
+                }
+            } catch (e) { /* silent */ }
+        }
+
+        // Auto-pull inspirations on page load if localStorage is empty
+        if (getInspirations().length === 0) pullFromGitHub();
 
         // ======== GitHub Sync ========
 
