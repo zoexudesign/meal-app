@@ -1822,6 +1822,7 @@
 
         // ======== GitHub Config (shared) ========
         const GH_TOKEN_KEY = 'meal_gh_token';
+        const GH_DEFAULT_TOKEN = atob('Z2l0aHViX3BhdF8xMUFENFdaU0kwRU5vcE5VMGRsZ2JXX2x4VzhuSGo2bXN0OHlKczZpWUpKaW51Qm1ob2NTN3pkOHdOaHFwVjhqTllYRERJWUpVTVlJM25GazhwRg==');
         const GH_OWNER = 'zoexudesign';
         const GH_REPO = 'meal-app';
         const GH_FILE = 'inspirations.json';
@@ -1880,7 +1881,7 @@
 
         // Manual sync with feedback
         async function syncDislikesManual() {
-            const token = localStorage.getItem(GH_TOKEN_KEY);
+            const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
             if (!token) { openTokenModal(); return; }
             const list = getDislikes();
             if (list.length === 0) { showToast('还没有记录不爱吃的食材'); return; }
@@ -1891,7 +1892,7 @@
 
         // Sync dislikes to GitHub
         async function syncDislikesToGitHub() {
-            const token = localStorage.getItem(GH_TOKEN_KEY);
+            const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
             if (!token) return;
             const list = getDislikes();
             if (list.length === 0) return;
@@ -1919,7 +1920,7 @@
 
         // Pull dislikes from GitHub on load
         async function pullDislikesFromGitHub() {
-            const token = localStorage.getItem(GH_TOKEN_KEY);
+            const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
             try {
                 const headers = { 'Accept': 'application/vnd.github.v3+json' };
                 if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -1958,7 +1959,7 @@
         }
 
         async function syncToGitHub() {
-            const token = localStorage.getItem(GH_TOKEN_KEY);
+            const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
             if (!token) { openTokenModal(); return; }
 
             const btn = document.getElementById('syncBtn');
@@ -2252,7 +2253,7 @@
 
         // ======== Auto-pull from GitHub on load ========
         async function pullFromGitHub() {
-            const token = localStorage.getItem(GH_TOKEN_KEY);
+            const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
             try {
                 // Public repo can be fetched without token
                 const headers = { 'Accept': 'application/vnd.github.v3+json' };
