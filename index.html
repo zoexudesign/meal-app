@@ -2255,7 +2255,6 @@
         async function pullFromGitHub() {
             const token = localStorage.getItem(GH_TOKEN_KEY) || GH_DEFAULT_TOKEN;
             try {
-                // Public repo can be fetched without token
                 const headers = { 'Accept': 'application/vnd.github.v3+json' };
                 if (token) headers['Authorization'] = `Bearer ${token}`;
                 const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
@@ -2267,6 +2266,14 @@
                 const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                 if (!json.inspirations || json.inspirations.length === 0) return;
                 const local = getInspirations();
+                if (local.length === 0) {
+                    // Fresh install / cache cleared — restore everything from remote
+                    const sorted = json.inspirations.sort((a, b) => b.date.localeCompare(a.date));
+                    saveInspirations(sorted);
+                    renderInspirations();
+                    showToast(`☁️ 已从云端恢复 ${sorted.length} 条记录`);
+                    return;
+                }
                 // Merge: use dish+date as unique key
                 const keyOf = item => item.dish + '|' + item.date;
                 const existing = new Set(local.map(keyOf));
