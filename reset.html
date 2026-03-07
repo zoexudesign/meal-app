@@ -83,18 +83,18 @@
                 }
                 // 3. Clear localStorage inspiration data so it re-pulls
                 // (keep the token and AI keys if user has set them)
-                const keepKeys = ['meal_gh_token', 'meal_ai_key', 'meal_ai_provider'];
+                const keepKeys = ['meal_gh_token', 'meal_ai_key', 'meal_ai_provider', 'meal_gemini_key', 'meal_deepseek_key'];
                 const allKeys = Object.keys(localStorage);
                 let cleared = 0;
                 allKeys.forEach(k => {
                     if (!keepKeys.includes(k)) { localStorage.removeItem(k); cleared++; }
                 });
                 statusEl.textContent += `\n已清除 ${cleared} 条本地数据`;
-                // 4. Redirect
+                // 4. Redirect — 保留 URL hash（含 token）
                 statusEl.className = 'status done';
                 statusEl.textContent = '✅ 缓存已清除！正在跳转...';
                 setTimeout(() => {
-                    window.location.replace('./index.html?reset=' + Date.now());
+                    window.location.replace('./index.html?reset=' + Date.now() + window.location.hash);
                 }, 1500);
             } catch (e) {
                 statusEl.className = 'status error';
