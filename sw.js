@@ -1,7 +1,5 @@
-const CACHE_NAME = 'meal-v35';
+const CACHE_NAME = 'meal-v36';
 const ASSETS = [
-    './',
-    './index.html',
     './data.js',
     './icon-192.png',
     './manifest.json'
