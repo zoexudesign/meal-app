@@ -1982,9 +1982,9 @@
         renderDislikes();
 
 
-        // Reset cache and reload — clears SW + caches + stale localStorage, keeps tokens
+        // Reset cache: only clears SW + browser caches, keeps ALL localStorage data
         async function resetCache() {
-            showToast('⏳ 正在恢复数据...');
+            showToast('⏳ 正在刷新页面...');
             try {
                 if ('serviceWorker' in navigator) {
                     const regs = await navigator.serviceWorker.getRegistrations();
@@ -1994,14 +1994,9 @@
                     const keys = await caches.keys();
                     for (const key of keys) await caches.delete(key);
                 }
-                // 保留 token 和 AI key，清除其他缓存数据以便重新从云端拉取
-                const keepKeys = ['meal_gh_token', 'meal_ai_key', 'meal_ai_provider', 'meal_gemini_key', 'meal_deepseek_key'];
-                Object.keys(localStorage).forEach(k => {
-                    if (!keepKeys.includes(k)) localStorage.removeItem(k);
-                });
                 window.location.reload(true);
             } catch (e) {
-                showToast('❌ 恢复失败: ' + e.message);
+                showToast('❌ 刷新失败: ' + e.message);
             }
         }
 
@@ -2118,7 +2113,7 @@
                     showToast(`☁️ 同步成功！共 ${merged.length} 道菜`);
                 } else if (putRes.status === 401 || putRes.status === 403) {
                     const errData = await putRes.json().catch(() => ({}));
-                    alert(`同步失败\n状态码: ${putRes.status}\nGitHub说: ${errData.message || '无详情'}\n\nToken前10位: ${token.substring(0, 10)}...\nSHA: ${sha || '无'}\n\n请截图发给开发者`);
+                    showToast(`❌ 同步失败: ${errData.message || 'Token 无效'}`);
                 } else {
                     const err = await putRes.json();
                     showToast(`同步失败: ${err.message || putRes.status}`);
