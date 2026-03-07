@@ -1982,7 +1982,7 @@
         renderDislikes();
 
 
-        // Reset cache and reload (clears old Service Worker)
+        // Reset cache and reload — clears SW + caches + stale localStorage, keeps tokens
         async function resetCache() {
             showToast('⏳ 正在恢复数据...');
             try {
@@ -1994,6 +1994,11 @@
                     const keys = await caches.keys();
                     for (const key of keys) await caches.delete(key);
                 }
+                // 保留 token 和 AI key，清除其他缓存数据以便重新从云端拉取
+                const keepKeys = ['meal_gh_token', 'meal_ai_key', 'meal_ai_provider', 'meal_gemini_key', 'meal_deepseek_key'];
+                Object.keys(localStorage).forEach(k => {
+                    if (!keepKeys.includes(k)) localStorage.removeItem(k);
+                });
                 window.location.reload(true);
             } catch (e) {
                 showToast('❌ 恢复失败: ' + e.message);
