@@ -1984,6 +1984,12 @@
 
         // Reset cache and reload — clears SW + caches + stale localStorage, keeps tokens
         async function resetCache() {
+            // 如果没有 token，先弹出输入框让用户设置
+            const token = getGHToken();
+            if (!token) {
+                openTokenModal();
+                return;
+            }
             showToast('⏳ 正在恢复数据...');
             try {
                 if ('serviceWorker' in navigator) {
