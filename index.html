@@ -2341,21 +2341,13 @@
 
         // ======== Auto-pull from GitHub on load ========
         async function pullFromGitHub() {
-            const token = getGHToken();
             try {
+                // 公开仓库读取不需要 token，避免因 token 问题导致拉取失败
                 const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
-                const headers = { 'Accept': 'application/vnd.github.v3+json' };
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-                let res = await fetch(url, { headers, cache: 'no-store' });
-                // Token 无效时降级为无认证访问（公开仓库不需要 token 也能读）
-                if (!res.ok && token && (res.status === 401 || res.status === 403)) {
-                    showToast('⚠️ Token 无效，正在用公开方式拉取...');
-                    localStorage.removeItem(GH_TOKEN_KEY);
-                    res = await fetch(url, {
-                        headers: { 'Accept': 'application/vnd.github.v3+json' },
-                        cache: 'no-store'
-                    });
-                }
+                const res = await fetch(url, {
+                    headers: { 'Accept': 'application/vnd.github.v3+json' },
+                    cache: 'no-store'
+                });
                 if (!res.ok) return;
                 const data = await res.json();
                 const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
