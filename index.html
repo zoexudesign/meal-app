@@ -2337,15 +2337,16 @@
                 const headers = { 'Accept': 'application/vnd.github.v3+json' };
                 if (token) headers['Authorization'] = `Bearer ${token}`;
                 let res = await fetch(url, { headers, cache: 'no-store' });
-                if (!res.ok && token && (res.status === 401 || res.status === 403)) {
-                    // token 认证失败，降级为公开访问
+                // 仅 401 (Bad credentials) 时降级为公开访问，403 不降级（可能是限流）
+                if (!res.ok && token && res.status === 401) {
                     res = await fetch(url, {
                         headers: { 'Accept': 'application/vnd.github.v3+json' },
                         cache: 'no-store'
                     });
                 }
                 if (!res.ok) {
-                    if (res.status === 403) showToast('⚠️ GitHub API 请求次数超限，请稍后再试');
+                    const errBody = await res.json().catch(() => ({}));
+                    showToast(`⚠️ 拉取失败 (${res.status}): ${errBody.message || '未知错误'}`);
                     return;
                 }
                 const data = await res.json();
