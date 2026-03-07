@@ -2117,7 +2117,8 @@
                     syncDislikesToGitHub();
                     showToast(`☁️ 同步成功！共 ${merged.length} 道菜`);
                 } else if (putRes.status === 401 || putRes.status === 403) {
-                    showToast('❌ 同步失败：Token 权限不足，请确认 Contents 设为 Read and write');
+                    const errData = await putRes.json().catch(() => ({}));
+                    showToast(`❌ 同步失败 (${putRes.status}): ${errData.message || 'Token 被拒绝'}`);
                 } else {
                     const err = await putRes.json();
                     showToast(`同步失败: ${err.message || putRes.status}`);
