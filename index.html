@@ -2112,9 +2112,7 @@
                     showToast(`☁️ 同步成功！共 ${merged.length} 道菜`);
                 } else if (putRes.status === 401 || putRes.status === 403) {
                     const errData = await putRes.json().catch(() => ({}));
-                    showToast(`❌ Token 无效 (${token.substring(0, 10)}...)，请重新输入`);
-                    localStorage.removeItem(GH_TOKEN_KEY);
-                    openTokenModal();
+                    showToast(`❌ 同步失败: ${errData.message || 'Token 认证失败'}`);
                 } else if (putRes.status === 409 || putRes.status === 422) {
                     // SHA 不匹配，重新获取最新 SHA 后重试
                     try {
