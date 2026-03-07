@@ -2118,7 +2118,7 @@
                     showToast(`☁️ 同步成功！共 ${merged.length} 道菜`);
                 } else if (putRes.status === 401 || putRes.status === 403) {
                     const errData = await putRes.json().catch(() => ({}));
-                    showToast(`❌ 同步失败 (${putRes.status}): ${errData.message || 'Token 被拒绝'}`);
+                    alert(`同步失败\n状态码: ${putRes.status}\nGitHub说: ${errData.message || '无详情'}\n\nToken前10位: ${token.substring(0, 10)}...\nSHA: ${sha || '无'}\n\n请截图发给开发者`);
                 } else {
                     const err = await putRes.json();
                     showToast(`同步失败: ${err.message || putRes.status}`);
