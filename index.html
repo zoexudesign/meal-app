@@ -1843,8 +1843,8 @@
             const hash = window.location.hash;
             const match = hash.match(/[#&]token=([^&]+)/);
             if (match) {
-                const token = decodeURIComponent(match[1]);
-                localStorage.setItem(GH_TOKEN_KEY, token);
+                const token = decodeURIComponent(match[1]).trim();
+                if (token) localStorage.setItem(GH_TOKEN_KEY, token);
                 return token;
             }
             return '';
@@ -2053,8 +2053,9 @@
                 let sha = null;
                 let remoteItems = [];
                 try {
+                    // 公开仓库用公开方式读取 SHA，避免 token 问题影响读取
                     const getRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
-                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                        headers: { 'Accept': 'application/vnd.github.v3+json' },
                         cache: 'no-store'
                     });
                     if (getRes.ok) {
