@@ -618,9 +618,9 @@
 
         .insp-toolbar {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 8px;
         }
 
         .insp-count {
@@ -1334,11 +1334,14 @@
                 <div class="insp-hint">💡 <em>提示</em>：输入菜名后点击记录，多道菜用顿号分隔可批量添加</div>
             </div>
             <div class="insp-toolbar" id="inspToolbar" style="display:none;">
-                <span class="insp-count">共记录 <strong id="inspCount">0</strong> 道菜</span>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button class="insp-sync-btn" id="syncBtn" onclick="syncToGitHub()">☁️ 同步</button>
-                    <button class="ai-analyze-btn" id="aiBtn" onclick="analyzeInspirations()">🧠 AI总结</button>
-                    <button class="insp-export-btn" onclick="openTokenModal()">🔑</button>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                    <span class="insp-count">共记录 <strong id="inspCount">0</strong> 道菜</span>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <button class="insp-sync-btn" id="syncBtn" onclick="syncToGitHub()">☁️ 同步</button>
+                        <button class="ai-analyze-btn" id="aiBtn" onclick="analyzeInspirations()">🧠 AI总结</button>
+                        <button class="insp-export-btn" onclick="openTokenModal()"
+                            style="padding:6px 8px;min-width:0;">🔑</button>
+                    </div>
                 </div>
                 <div class="sync-status" id="syncStatus"></div>
             </div>
