@@ -2115,6 +2115,33 @@
                     showToast(`❌ Token 无效 (${token.substring(0, 10)}...)，请重新输入`);
                     localStorage.removeItem(GH_TOKEN_KEY);
                     openTokenModal();
+                } else if (putRes.status === 409 || putRes.status === 422) {
+                    // SHA 不匹配，重新获取最新 SHA 后重试
+                    try {
+                        const retryGet = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+                            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                            cache: 'no-store'
+                        });
+                        if (retryGet.ok) {
+                            const retryData = await retryGet.json();
+                            body.sha = retryData.sha;
+                            const retryPut = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, {
+                                method: 'PUT',
+                                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+                                body: JSON.stringify(body)
+                            });
+                            if (retryPut.ok) {
+                                const now = new Date().toLocaleString('zh-CN');
+                                localStorage.setItem(GH_SYNC_TIME_KEY, now);
+                                updateSyncStatus();
+                                syncDislikesToGitHub();
+                                showToast(`☁️ 同步成功！共 ${merged.length} 道菜`);
+                            } else {
+                                const err = await retryPut.json().catch(() => ({}));
+                                showToast(`同步失败: ${err.message || retryPut.status}`);
+                            }
+                        }
+                    } catch (e) { showToast('重试失败，请稍后再试'); }
                 } else {
                     const err = await putRes.json();
                     showToast(`同步失败: ${err.message || putRes.status}`);
