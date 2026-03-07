@@ -2026,11 +2026,26 @@
         function openTokenModal() { document.getElementById('tokenModal').classList.add('show'); }
         function closeTokenModal() { document.getElementById('tokenModal').classList.remove('show'); }
 
-        function saveTokenAndSync() {
+        async function saveTokenAndSync() {
             const token = document.getElementById('tokenInput').value.trim();
             if (!token) { showToast('请输入 Token'); return; }
+            // 先验证 token 是否有效
+            showToast('⏳ 验证 Token...');
+            try {
+                const testRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+                });
+                if (!testRes.ok) {
+                    showToast(`❌ Token 无效 (${testRes.status})，请检查后重试`);
+                    return;
+                }
+            } catch (e) {
+                showToast('❌ 网络错误，请稍后重试');
+                return;
+            }
             localStorage.setItem(GH_TOKEN_KEY, token);
             closeTokenModal();
+            showToast('✅ Token 已保存');
             syncToGitHub();
         }
 
