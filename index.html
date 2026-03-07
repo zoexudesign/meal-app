@@ -1340,20 +1340,18 @@
                     <button class="ai-analyze-btn" id="aiBtn" onclick="analyzeInspirations()">🧠 AI总结</button>
                     <button class="insp-export-btn" onclick="openTokenModal()">🔑</button>
                 </div>
+                <div class="sync-status" id="syncStatus"></div>
             </div>
-            <div class="sync-status" id="syncStatus"></div>
+            <div class="ai-result" id="aiResult">
+                <div class="ai-result-header">
+                    <span class="ai-result-title">🧠 AI 分析</span>
+                    <button class="ai-result-close"
+                        onclick="document.getElementById('aiResult').classList.remove('show')">✕</button>
+                </div>
+                <div class="ai-result-body" id="aiResultBody"></div>
+            </div>
+            <div id="inspList"></div>
         </div>
-    </div>
-    <div class="ai-result" id="aiResult">
-        <div class="ai-result-header">
-            <span class="ai-result-title">🧠 AI 分析</span>
-            <button class="ai-result-close"
-                onclick="document.getElementById('aiResult').classList.remove('show')">✕</button>
-        </div>
-        <div class="ai-result-body" id="aiResultBody"></div>
-    </div>
-    <div id="inspList"></div>
-    </div>
     </div>
 
     <!-- PAGE 4: Dislikes -->
