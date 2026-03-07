@@ -773,7 +773,8 @@
         .sync-status {
             font-size: 11px;
             color: var(--text-dim);
-            margin-top: 2px;
+            margin-top: 0;
+            margin-bottom: 0;
             text-align: right;
         }
 
@@ -1340,17 +1341,18 @@
                     <button class="insp-export-btn" onclick="openTokenModal()">🔑</button>
                 </div>
             </div>
+            <div class="sync-status" id="syncStatus"></div>
         </div>
-        <div class="sync-status" id="syncStatus"></div>
-        <div class="ai-result" id="aiResult">
-            <div class="ai-result-header">
-                <span class="ai-result-title">🧠 AI 分析</span>
-                <button class="ai-result-close"
-                    onclick="document.getElementById('aiResult').classList.remove('show')">✕</button>
-            </div>
-            <div class="ai-result-body" id="aiResultBody"></div>
+    </div>
+    <div class="ai-result" id="aiResult">
+        <div class="ai-result-header">
+            <span class="ai-result-title">🧠 AI 分析</span>
+            <button class="ai-result-close"
+                onclick="document.getElementById('aiResult').classList.remove('show')">✕</button>
         </div>
-        <div id="inspList"></div>
+        <div class="ai-result-body" id="aiResultBody"></div>
+    </div>
+    <div id="inspList"></div>
     </div>
     </div>
 
