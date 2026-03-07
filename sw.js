@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meal-v40';
+const CACHE_NAME = 'meal-v41';
 const ASSETS = [
     './data.js',
     './icon-192.png',

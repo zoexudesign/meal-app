@@ -1842,7 +1842,10 @@
             const match = hash.match(/[#&]token=([^&]+)/);
             if (match) {
                 const token = decodeURIComponent(match[1]).trim();
-                if (token) localStorage.setItem(GH_TOKEN_KEY, token);
+                // 仅当 localStorage 没有 token 时才从 URL 恢复，避免覆盖手动输入的有效 token
+                if (token && !localStorage.getItem(GH_TOKEN_KEY)) {
+                    localStorage.setItem(GH_TOKEN_KEY, token);
+                }
                 return token;
             }
             return '';
@@ -1850,7 +1853,7 @@
         function getGHToken() {
             return localStorage.getItem(GH_TOKEN_KEY) || recoverTokenFromHash();
         }
-        // 页面加载时自动恢复
+        // 页面加载时自动恢复（仅在无 token 时生效）
         recoverTokenFromHash();
 
         // ======== Dislikes System ========
