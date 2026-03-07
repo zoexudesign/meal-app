@@ -1418,7 +1418,7 @@
             <div class="modal-desc" style="font-size:12px;opacity:0.6;margin-top:4px;">
                 💡 保存后在网址末尾加 <strong>#token=你的token</strong> 再添加到主屏幕，清缓存后也能自动恢复。
             </div>
-            <input type="password" class="modal-input" id="tokenInput" placeholder="ghp_xxxxxxxxxxxx">
+            <input type="password" class="modal-input" id="tokenInput" placeholder="github_pat_xxxxxxxxxxxx">
             <div class="modal-btns">
                 <button class="modal-btn-cancel" onclick="closeTokenModal()">取消</button>
                 <button class="modal-btn-ok" onclick="saveTokenAndSync()">保存并同步</button>
@@ -1837,7 +1837,7 @@
         const GH_SYNC_TIME_KEY = 'meal_last_sync';
 
         // ======== Token Recovery from URL Hash ========
-        // URL 格式: https://app/#token=ghp_xxx
+        // URL 格式: https://app/#token=github_pat_xxx
         // 添加到主屏幕后，清缓存再打开会自动恢复 token
         function recoverTokenFromHash() {
             const hash = window.location.hash;
