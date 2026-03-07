@@ -2331,26 +2331,14 @@
         // ======== Auto-pull from GitHub on load ========
         async function pullFromGitHub() {
             try {
-                const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
-                const token = getGHToken();
-                // 优先用 token（每小时 5000 次），失败则用公开访问（每小时 60 次）
-                const headers = { 'Accept': 'application/vnd.github.v3+json' };
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-                let res = await fetch(url, { headers, cache: 'no-store' });
-                // 仅 401 (Bad credentials) 时降级为公开访问，403 不降级（可能是限流）
-                if (!res.ok && token && res.status === 401) {
-                    res = await fetch(url, {
-                        headers: { 'Accept': 'application/vnd.github.v3+json' },
-                        cache: 'no-store'
-                    });
-                }
+                // 直接读取原始文件，不走 API，不受速率限制
+                const url = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}?t=${Date.now()}`;
+                const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) {
-                    const errBody = await res.json().catch(() => ({}));
-                    showToast(`⚠️ 拉取失败 (${res.status}): ${errBody.message || '未知错误'}`);
+                    showToast(`⚠️ 拉取失败 (${res.status})`);
                     return;
                 }
-                const data = await res.json();
-                const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                const json = await res.json();
                 if (!json.inspirations || json.inspirations.length === 0) return;
                 const local = getInspirations();
                 if (local.length === 0) {
