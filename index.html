@@ -2331,26 +2331,34 @@
         // ======== Auto-pull from GitHub on load ========
         async function pullFromGitHub() {
             try {
-                // 公开仓库读取不需要 token，避免因 token 问题导致拉取失败
                 const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
-                const res = await fetch(url, {
-                    headers: { 'Accept': 'application/vnd.github.v3+json' },
-                    cache: 'no-store'
-                });
-                if (!res.ok) return;
+                const token = getGHToken();
+                // 优先用 token（每小时 5000 次），失败则用公开访问（每小时 60 次）
+                const headers = { 'Accept': 'application/vnd.github.v3+json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                let res = await fetch(url, { headers, cache: 'no-store' });
+                if (!res.ok && token && (res.status === 401 || res.status === 403)) {
+                    // token 认证失败，降级为公开访问
+                    res = await fetch(url, {
+                        headers: { 'Accept': 'application/vnd.github.v3+json' },
+                        cache: 'no-store'
+                    });
+                }
+                if (!res.ok) {
+                    if (res.status === 403) showToast('⚠️ GitHub API 请求次数超限，请稍后再试');
+                    return;
+                }
                 const data = await res.json();
                 const json = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                 if (!json.inspirations || json.inspirations.length === 0) return;
                 const local = getInspirations();
                 if (local.length === 0) {
-                    // Fresh install / cache cleared — restore everything from remote
                     const sorted = json.inspirations.sort((a, b) => b.date.localeCompare(a.date));
                     saveInspirations(sorted);
                     renderInspirations();
                     showToast(`☁️ 已从云端恢复 ${sorted.length} 条记录`);
                     return;
                 }
-                // Merge: use dish+date as unique key
                 const keyOf = item => item.dish + '|' + item.date;
                 const existing = new Set(local.map(keyOf));
                 let added = 0;
@@ -2367,7 +2375,9 @@
                     renderInspirations();
                     showToast(`☁️ 已从云端恢复 ${added} 条记录`);
                 }
-            } catch (e) { /* network error, silent fail */ }
+            } catch (e) {
+                showToast('⚠️ 网络错误，无法拉取数据');
+            }
         }
         pullFromGitHub();
 
