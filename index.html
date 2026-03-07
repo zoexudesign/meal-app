@@ -2373,8 +2373,27 @@
         pullFromGitHub();
 
         init();
+        // Service Worker 自动更新机制 — 不需要手动清缓存
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+                .then(reg => {
+                    // 每次打开页面都检查更新
+                    reg.update();
+                    // 有新版本时自动刷新
+                    reg.addEventListener('updatefound', () => {
+                        const newSW = reg.installing;
+                        newSW.addEventListener('statechange', () => {
+                            if (newSW.state === 'activated') {
+                                showToast('🆕 已更新到最新版本');
+                                setTimeout(() => window.location.reload(), 1000);
+                            }
+                        });
+                    });
+                });
+            // 当新 SW 接管时自动刷新
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
         }
     </script>
 </body>
